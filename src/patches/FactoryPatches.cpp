@@ -10,6 +10,9 @@
 //   modPitch semitones, modFine cents, vibDepth cents, vibSpeed Hz, vibDelay ms
 //   playMode 0 POLY 1 MONO, glideMode 0 ALWAYS 1 LEGATO, glideTime ms
 //   arpMode 0 OFF 1 CHORD 2 FIXED, arpPattern = index into arpPatterns, arpSpeed frames
+//   wheelDest 0 VIBRATO 1 CUTOFF 2 RESO 3 PULSE W 4 MOD PITCH, wheelAmount -100..100 %
+//   bendUp / bendDown semitones, bendTarget 0 PITCH 1 MOD PITCH  (left out = defaults:
+//   wheel -> vibrato +50 %, bend +-2 on the pitch)
 //   drums: <drum>_tune (MIDI note), _decay 0..15, _sweep semitones, _noise frames,
 //          _wave 0 TRI 1 SAW 2 PULSE 3 NOISE 4 HUBBARD, _level dB
 
@@ -66,7 +69,8 @@ namespace
             { "attack", 0 }, { "decay", 10 }, { "sustain", 12 }, { "release", 7 },
             { "filterOn", 1 }, { "cutoff", 1800 }, { "resonance", 6 },
             { "vibDepth", 25 }, { "vibSpeed", 5.5f }, { "vibDelay", 400 },
-            { "playMode", 1 }, { "glideMode", 1 }, { "glideTime", 80 } } });
+            { "playMode", 1 }, { "glideMode", 1 }, { "glideTime", 80 },
+            { "wheelDest", 4 }, { "wheelAmount", 50 } } });   // the wheel sweeps the sync: +12 semitones
         p.push_back ({ "GALWAY FLUTE", I, {    // soft triangle with a slow, wide vibrato
             { "waveform", 0 },
             { "attack", 3 }, { "decay", 9 }, { "sustain", 11 }, { "release", 8 },
@@ -84,14 +88,16 @@ namespace
             { "attack", 0 }, { "decay", 9 }, { "sustain", 12 }, { "release", 6 },
             { "filterOn", 0 },
             { "vibDepth", 30 }, { "vibSpeed", 6.5f }, { "vibDelay", 200 },
-            { "playMode", 1 }, { "glideMode", 1 }, { "glideTime", 30 } } });
+            { "playMode", 1 }, { "glideMode", 1 }, { "glideTime", 30 },
+            { "wheelDest", 3 }, { "wheelAmount", 70 } } });   // the wheel fattens the pulse
 
         // basses
         p.push_back ({ "ACID SID BASS", I, {    // resonant 6581 low-pass, legato slides
             { "waveform", 1 },
             { "attack", 0 }, { "decay", 6 }, { "sustain", 5 }, { "release", 3 },
             { "filterOn", 1 }, { "cutoff", 420 }, { "resonance", 14 },
-            { "playMode", 1 }, { "glideMode", 1 }, { "glideTime", 90 } } });
+            { "playMode", 1 }, { "glideMode", 1 }, { "glideTime", 90 },
+            { "wheelDest", 1 }, { "wheelAmount", 60 } } });   // the wheel opens the filter
         p.push_back ({ "OCTAVE BASS", I, {      // the 1-frame octave jump bass
             { "waveform", 1 },
             { "attack", 0 }, { "decay", 5 }, { "sustain", 8 }, { "release", 3 },
@@ -102,12 +108,14 @@ namespace
             { "waveform", 2 }, { "pulseWidth", 1024 }, { "pwmSpeed", 12 },
             { "attack", 0 }, { "decay", 7 }, { "sustain", 9 }, { "release", 4 },
             { "filterOn", 1 }, { "cutoff", 700 }, { "resonance", 6 },
-            { "playMode", 1 }, { "glideMode", 1 }, { "glideTime", 50 } } });
+            { "playMode", 1 }, { "glideMode", 1 }, { "glideTime", 50 },
+            { "wheelDest", 1 }, { "wheelAmount", 50 } } });
         p.push_back ({ "SYNC BASS", I, {
             { "waveform", 1 }, { "sync", 1 }, { "modPitch", 7 },
             { "attack", 0 }, { "decay", 6 }, { "sustain", 6 }, { "release", 3 },
             { "filterOn", 1 }, { "cutoff", 1350 }, { "resonance", 5 },
-            { "playMode", 1 } } });
+            { "playMode", 1 },
+            { "wheelDest", 4 }, { "wheelAmount", 40 } } });
 
         // chords and arpeggios
         p.push_back ({ "CHORD BUZZ", I, {       // hold a chord: the classic 1-frame C64 arpeggio

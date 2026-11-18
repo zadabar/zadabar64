@@ -52,4 +52,20 @@ void Settings::setTiming (int timing)
     sendChangeMessage();
 }
 
+juce::String Settings::getMidiMap() const
+{
+    if (auto* f = const_cast<juce::ApplicationProperties&> (props).getUserSettings())
+        return f->getValue ("midiMap");
+    return {};
+}
+
+void Settings::setMidiMap (const juce::String& map)
+{
+    if (auto* f = props.getUserSettings())
+    {
+        f->setValue ("midiMap", map);
+        f->saveIfNeeded();
+    }
+}
+
 } // namespace zadabar

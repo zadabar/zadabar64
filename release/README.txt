@@ -65,12 +65,14 @@
    * Arpeggio: CHORD (hold a chord)      ----------
      or FIXED patterns, 1-4 frames       * 6581 or 8580, PAL or NTSC
      per step, frame-exact               * Oscilloscope drawn by a real
-                                           (emulated) SID
-                                         * Live envelope view, level meter
-                                         * 3 skins: READY. / Breadbin /
-                                           Demoscene
-                                         * 21 factory patches, 8 kits,
-                                           save your own
+   * Mod wheel to vibrato, cutoff,         (emulated) SID
+     resonance, pulse width or a         * Live envelope view, level meter
+     sync sweep, with an amount          * 3 skins: READY. / Breadbin /
+   * Pitch bend: separate up and down      Demoscene
+     range, on the note or the           * 21 factory patches, 8 kits,
+     ring/sync modulator                   save your own
+                                         * MIDI learn: right-click any
+                                           knob, switch or list
 
 
   ======================================================================
@@ -101,6 +103,11 @@
      * SETUP -> TIMING: LIVE (no latency, authentic) or TIGHT (a hard
        restart before every note, 40 ms latency your DAW compensates).
      * ANALOG NOISE brings back the 6581's hiss, if you miss it.
+     * MIDI LEARN: right-click a knob, choose MIDI LEARN, then move a
+       knob on your MIDI controller. SETUP -> MIDI shows the map and can
+       make it the default for new instances.
+     * The mod wheel and pitch bend are set per patch in the WHEEL and
+       BEND panels (bottom left and bottom right).
 
 
   ======================================================================

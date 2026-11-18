@@ -16,7 +16,7 @@ namespace zadabar
 {
 
 // Which part of the plugin a control belongs to. Some skins colour-code sections.
-enum class Section { Chip = 0, Osc, Env, Filter, Out, Drums, Setup, Mod, Vibrato, Glide, Arp };
+enum class Section { Chip = 0, Osc, Env, Filter, Out, Drums, Setup, Mod, Vibrato, Glide, Arp, Midi };
 
 // Tags a component with its section (read by the skins when drawing it).
 inline void setSection (juce::Component& c, Section s)  { c.getProperties().set ("section", static_cast<int> (s)); }
@@ -37,6 +37,7 @@ struct HeaderState
     float scrollPos  = 0.0f;    // demoscene scroller, in pixels
     juce::String chipText;      // e.g. "6581 PAL"
     bool  drumMode   = false;
+    juce::String message;       // shown in the status strip instead of its usual text (MIDI learn)
 };
 
 // A skin = a LookAndFeel (knobs, buttons, combo boxes) plus painters for the
@@ -53,6 +54,9 @@ public:
     static juce::String nameOf (int index);
     static juce::String descriptionOf (int index);
 
+    // "V0.4": the plugin version from CMake, major.minor
+    static juce::String shortVersion() { return "V" + juce::String (JucePlugin_VersionString).upToLastOccurrenceOf (".", false, false); }
+
     // --- shared helpers
     juce::Font font (float height) const;                      // the C64 font
     juce::Font fittingFont (const juce::String& text, int width) const;   // 16 px if it fits, else 8 px
@@ -67,6 +71,8 @@ public:
     virtual void paintHeader (juce::Graphics&, juce::Rectangle<int> header, juce::Rectangle<int> logoArea,
                               juce::Rectangle<int> infoArea, const HeaderState&) = 0;
     virtual void paintStatusStrip (juce::Graphics&, juce::Rectangle<int>, const HeaderState&) = 0;
+    // A message over the status strip (HeaderState::message): inverse video, like a C64 prompt.
+    virtual void paintStatusMessage (juce::Graphics&, juce::Rectangle<int>, const juce::String&);
     virtual void paintPanel (juce::Graphics&, juce::Rectangle<int>, const juce::String& title, Section) = 0;
     virtual void paintMeter (juce::Graphics&, juce::Rectangle<int>, float level01, float peak01) = 0;
     virtual void paintEnvelope (juce::Graphics&, juce::Rectangle<int>, const std::vector<juce::Point<float>>& curve01,

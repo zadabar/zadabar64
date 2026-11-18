@@ -10,6 +10,7 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include "Learnable.h"
 #include "Skin.h"
 
 namespace zadabar
@@ -26,9 +27,10 @@ public:
     SegmentedChoice (juce::AudioProcessorValueTreeState&, const juce::String& paramID,
                      const juce::StringArray& labels, Section, float fontSize = 8.0f);
     void resized() override;
+    void setTooltip (const juce::String& text);   // on every button
 
 private:
-    juce::OwnedArray<juce::TextButton> buttons;
+    juce::OwnedArray<LearnButton> buttons;
     std::unique_ptr<juce::ParameterAttachment> attachment;
     int numOptions = 0;
 };
@@ -119,7 +121,7 @@ private:
     int heldNote = -1;
     bool flashing = false;         // a pad was lit at the last tick
 
-    juce::OwnedArray<juce::Slider> levels;
+    juce::OwnedArray<LearnSlider> levels;
     juce::OwnedArray<juce::AudioProcessorValueTreeState::SliderAttachment> levelAttachments;
     static constexpr int faderHeight = 18;
 };

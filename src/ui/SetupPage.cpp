@@ -44,6 +44,15 @@ SetupPage::SetupPage()
         ++t;
     }
 
+    midiHeading.setText ("MIDI", juce::dontSendNotification);
+    midiHeading.getProperties().set ("fontSize", 16.0f);
+    addAndMakeVisible (midiHeading);
+    midiForgetAll.onClick   = [this] { if (onForgetAllMidi) onForgetAllMidi(); };
+    midiSaveDefault.onClick = [this] { if (onSaveMidiDefault) onSaveMidiDefault(); };
+    midiSaveDefault.setTooltip ("New Zadabar64 instances start with this MIDI map. Each project keeps its own map.");
+    for (auto* b : { &midiForgetAll, &midiSaveDefault })
+        addAndMakeVisible (b);
+
     closeButton.getProperties().set ("fontSize", 16.0f);
     closeButton.onClick = [this] { if (onClose) onClose(); };
     addAndMakeVisible (closeButton);
@@ -59,6 +68,15 @@ void SetupPage::setCurrentTiming (int timing)
 {
     timingLive.setToggleState  (timing == 0, juce::dontSendNotification);
     timingTight.setToggleState (timing == 1, juce::dontSendNotification);
+}
+
+void SetupPage::setMidiMappings (const juce::StringArray& lines)
+{
+    if (lines == midiLines)
+        return;
+    midiLines = lines;
+    midiForgetAll.setEnabled (! lines.isEmpty());
+    repaint();
 }
 
 void SetupPage::paint (juce::Graphics& g)
@@ -79,8 +97,28 @@ void SetupPage::paint (juce::Graphics& g)
                                      "       UP TO 33 MS BY THE SID ADSR BUG.  TIGHT: HARD RESTART BEFORE EVERY NOTE,",
                                      "       ALWAYS ON TIME, ADDS 40 MS LATENCY (YOUR DAW COMPENSATES DURING PLAYBACK)." });
 
+        drawLines (midiHelpArea, { "MOD WHEEL AND PITCH BEND: SEE THE WHEEL AND BEND PANELS.  MIDI LEARN: RIGHT-CLICK",
+                                   "A KNOB, SWITCH OR LIST, CHOOSE MIDI LEARN AND MOVE A CONTROL ON YOUR CONTROLLER." });
+
+        // the map, in columns
+        constexpr int rows = 4, columns = 3;
+        const int colWidth = midiListArea.getWidth() / columns;
+        g.setColour (skin->valueColour());
+        if (midiLines.isEmpty())
+            g.drawText ("NO CONTROLLERS LEARNED YET.", midiListArea.withHeight (14), juce::Justification::centredLeft, false);
+        for (int i = 0; i < midiLines.size() && i < rows * columns; ++i)
+        {
+            auto text = midiLines[i];
+            if (i == rows * columns - 1 && midiLines.size() > rows * columns)
+                text = "+" + juce::String (midiLines.size() - i) + " MORE";
+            g.drawText (text, midiListArea.getX() + (i / rows) * colWidth, midiListArea.getY() + (i % rows) * 14,
+                        colWidth - 8, 14, juce::Justification::centredLeft, true);
+        }
+        g.setColour (skin->textColour());
+
+        const auto credits = "ZADABAR64 " + Skin::shortVersion() + " BY ZADABAR  -  FREE SOFTWARE, GPL-3.0";
         drawLines (getLocalBounds().reduced (24).removeFromBottom (28),
-                   { "ZADABAR64 V0.3 BY ZADABAR  -  FREE SOFTWARE, GPL-3.0",
+                   { credits.toRawUTF8(),
                      "SID EMULATION: RESIDFP  -  FONT: PRESS START 2P (SIL OFL 1.1)" });
     }
 }
@@ -116,6 +154,17 @@ void SetupPage::resized()
     timingTight.setBounds (row.removeFromLeft (160));
     r.removeFromTop (10);
     timingHelpArea = r.removeFromTop (48);
+
+    r.removeFromTop (6);
+    auto midiRow = r.removeFromTop (24);
+    midiHeading.setBounds (midiRow.removeFromLeft (120));
+    midiSaveDefault.setBounds (midiRow.removeFromRight (150));
+    midiRow.removeFromRight (10);
+    midiForgetAll.setBounds (midiRow.removeFromRight (120));
+    r.removeFromTop (6);
+    midiHelpArea = r.removeFromTop (28);
+    r.removeFromTop (4);
+    midiListArea = r.removeFromTop (56);
 }
 
 } // namespace zadabar

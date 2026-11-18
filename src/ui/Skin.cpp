@@ -143,4 +143,14 @@ void Skin::positionComboBoxText (juce::ComboBox& box, juce::Label& label)
     label.setJustificationType (juce::Justification::centred);
 }
 
+void Skin::paintStatusMessage (juce::Graphics& g, juce::Rectangle<int> r, const juce::String& text)
+{
+    const auto bar = r.reduced (0, 3);
+    g.setColour (valueColour());
+    g.fillRect (bar);
+    g.setColour (valueColour().contrasting (1.0f));
+    g.setFont (fittingFont (text, bar.getWidth() - 16));
+    g.drawText (text, bar.reduced (8, 0), juce::Justification::centredLeft, true);
+}
+
 } // namespace zadabar

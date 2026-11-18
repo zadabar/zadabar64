@@ -38,6 +38,7 @@ Zadabar64Editor::Zadabar64Editor (Zadabar64Processor& p)
       playMode   (p.apvts, ParamID::playMode, { "POLY", "MONO" }, Section::Glide),
       glideMode  (p.apvts, ParamID::glideMode, { "ALWAYS", "LEGATO" }, Section::Glide),
       arpMode    (p.apvts, ParamID::arpMode, { "OFF", "CHORD", "FIXED" }, Section::Arp, 7.0f),
+      bendTarget (p.apvts, ParamID::bendTarget, { "PITCH", "MOD" }, Section::Midi),
       filterMode (p.apvts, ParamID::filterMode, { "LP", "BP", "HP", "NOTCH" }, Section::Filter),
       meter (p),
       drumPads (p, [this] (int i) { selectDrum (i); }),
@@ -119,6 +120,17 @@ Zadabar64Editor::Zadabar64Editor (Zadabar64Processor& p)
     setupKnob (arpSpeed, "SPEED", Section::Arp, ParamID::arpSpeed);
     arpSpeed.slider.setTooltip ("Frames per step. 1 frame (1/50 s on PAL) is the classic C64 chord buzz.");
 
+    // mod wheel and pitch bend
+    setupCaption (wheelCaption, "WHEEL TO", Section::Midi);
+    setSection (wheelDest, Section::Midi);
+    wheelDest.addItemList (upper (juce::StringArray { "Vibrato", "Cutoff", "Reso", "Pulse W", "Mod Pitch" }), 1);
+    addAndMakeVisible (wheelDest);
+    wheelDestAttachment = std::make_unique<ComboAttachment> (p.apvts, ParamID::wheelDest, wheelDest);
+    setupKnob (wheelAmount, "AMOUNT", Section::Midi, ParamID::wheelAmount);
+    addAndMakeVisible (bendTarget);
+    setupKnob (bendUp,   "UP",   Section::Midi, ParamID::bendUp);
+    setupKnob (bendDown, "DOWN", Section::Midi, ParamID::bendDown);
+
     // filter
     addAndMakeVisible (filterMode);
     setSection (filterOn, Section::Filter);
@@ -170,6 +182,45 @@ Zadabar64Editor::Zadabar64Editor (Zadabar64Processor& p)
     patchBar.onSaveAs = [this] (PatchType t) { saveDialog.show (t); };
     addChildComponent (saveDialog);
     saveDialog.onSaved = [this] { patchBar.refresh(); };
+
+    // MIDI learn: right-click any of these
+    for (auto [k, id] : { std::pair<Knob*, const char*> { &analogNoise, ParamID::analogNoise }, { &pulseWidth, ParamID::pulseWidth },
+                          { &pwmSpeed, ParamID::pwmSpeed }, { &attack, ParamID::attack }, { &decay, ParamID::decay },
+                          { &sustain, ParamID::sustain }, { &release, ParamID::release }, { &modPitch, ParamID::modPitch },
+                          { &modFine, ParamID::modFine }, { &vibDepth, ParamID::vibDepth }, { &vibSpeed, ParamID::vibSpeed },
+                          { &vibDelay, ParamID::vibDelay }, { &glideTime, ParamID::glideTime }, { &cutoff, ParamID::cutoff },
+                          { &resonance, ParamID::resonance }, { &volume, ParamID::volume }, { &outputGain, ParamID::outputGain } })
+        tagControl (k->slider, id);
+    tagControl (arpSpeed.slider, ParamID::arpSpeed, arpSpeed.slider.getTooltip());
+    tagControl (wheelAmount.slider, ParamID::wheelAmount,
+                "How far the mod wheel moves its target. Negative = the other way (for vibrato the same).");
+    tagControl (bendUp.slider, ParamID::bendUp, "Pitch bend range up, in semitones.");
+    tagControl (bendDown.slider, ParamID::bendDown, "Pitch bend range down, in semitones.");
+    tagControl (waveform, ParamID::waveform);
+    tagControl (arpPattern, ParamID::arpPattern);
+    tagControl (wheelDest, ParamID::wheelDest,
+                "What the mod wheel (CC 1) moves. VIBRATO starts right away, without the vibrato delay.");
+    tagControl (ringButton, ParamID::ring, ringButton.getTooltip());
+    tagControl (syncButton, ParamID::sync, syncButton.getTooltip());
+    tagControl (filterOn, ParamID::filterOn);
+    tagControl (modeSwitch, ParamID::mode);
+    tagControl (chipModel, ParamID::chipModel);
+    tagControl (video, ParamID::video);
+    tagControl (playMode, ParamID::playMode);
+    tagControl (glideMode, ParamID::glideMode);
+    tagControl (arpMode, ParamID::arpMode);
+    tagControl (filterMode, ParamID::filterMode);
+    tagControl (bendTarget, ParamID::bendTarget,
+                "PITCH bends the note. MOD bends only the ring/sync modulator: a hard-sync sweep on the bender.");
+    selectDrum (processor.selectedDrum.load());   // tags the drum editor's controls
+
+    setupPage.onForgetAllMidi = [this] { processor.midiLearn.forgetAll(); };
+    setupPage.onSaveMidiDefault = [this]
+    {
+        settings->setMidiMap (processor.midiLearn.toString());
+        timedMessage = "MIDI MAP SAVED AS DEFAULT FOR NEW INSTANCES";
+        messageTicks = 90;
+    };
 
     setSize (Layout::width, Layout::height);
     updateVisibility();
@@ -227,6 +278,12 @@ void Zadabar64Editor::selectDrum (int index)
     drumSweep.attachment = std::make_unique<SliderAttachment> (st, drumParam (index, "sweep"), drumSweep.slider);
     drumNoise.attachment = std::make_unique<SliderAttachment> (st, drumParam (index, "noise"), drumNoise.slider);
     drumWaveAttachment   = std::make_unique<ComboAttachment>  (st, drumParam (index, "wave"),  drumWave);
+    tagControl (drumTune.slider,  drumParam (index, "tune"));
+    tagControl (drumDecay.slider, drumParam (index, "decay"));
+    tagControl (drumSweep.slider, drumParam (index, "sweep"));
+    tagControl (drumNoise.slider, drumParam (index, "noise"));
+    tagControl (drumWave,         drumParam (index, "wave"));
+    learnVersion = -1;            // refresh tooltips
     drumPads.repaint();
 }
 
@@ -278,7 +335,9 @@ void Zadabar64Editor::updateVisibility()
                                                              &vibDepth.slider, &vibDepth.label, &vibSpeed.slider, &vibSpeed.label,
                                                              &vibDelay.slider, &vibDelay.label, &playMode, &glideMode,
                                                              &glideTime.slider, &glideTime.label,
-                                                             &arpMode, &arpPattern, &arpSpeed.slider, &arpSpeed.label })
+                                                             &arpMode, &arpPattern, &arpSpeed.slider, &arpSpeed.label,
+                                                             &wheelCaption, &wheelDest, &wheelAmount.slider, &wheelAmount.label,
+                                                             &bendTarget, &bendUp.slider, &bendUp.label, &bendDown.slider, &bendDown.label })
         c->setVisible (panels && ! drums);
 
     for (auto* c : std::initializer_list<juce::Component*> { &drumPads, &drumView, &drumName, &drumWaveCaption, &drumWave,
@@ -336,6 +395,8 @@ void Zadabar64Editor::timerCallback()
             c->setAlpha (on ? 1.0f : 0.3f);
         }
 
+    refreshLearnState();
+
     const bool is8580 = Params::asInt (*processor.apvts.getRawParameterValue (ParamID::chipModel)) == 1;
     const bool isNtsc = Params::asInt (*processor.apvts.getRawParameterValue (ParamID::video)) == 1;
     headerState.chipText = juce::String (is8580 ? "8580" : "6581") + (isNtsc ? " NTSC" : " PAL");
@@ -344,7 +405,7 @@ void Zadabar64Editor::timerCallback()
     // cursor, chip), except a strip that animates by itself (the Demoscene scroller).
     const auto signature = juce::String (headerState.voiceActive[0] ? "1" : "0") + (headerState.voiceActive[1] ? "1" : "0")
                          + (headerState.voiceActive[2] ? "1" : "0") + (headerState.cursorOn ? "C" : "c")
-                         + (headerState.drumMode ? "D" : "I") + headerState.chipText;
+                         + (headerState.drumMode ? "D" : "I") + headerState.chipText + headerState.message;
     if (signature != headerSignature)
     {
         headerSignature = signature;
@@ -355,6 +416,100 @@ void Zadabar64Editor::timerCallback()
     {
         repaint (stripTextArea);
     }
+}
+
+// ------------------------------------------------------------------ MIDI learn
+
+void Zadabar64Editor::tagControl (juce::Component& c, const juce::String& paramID, const juce::String& tooltip)
+{
+    // a control that was tagged for another parameter before (drum editor) gives that up
+    for (auto it = learnControls.begin(); it != learnControls.end(); )
+        it = it->second.control.getComponent() == &c && it->first != paramID ? learnControls.erase (it) : std::next (it);
+    setParamID (c, paramID);
+    learnControls[paramID] = { &c, tooltip };
+}
+
+void Zadabar64Editor::showLearnMenu (juce::Component& control, const juce::String& paramID)
+{
+    auto& learn = processor.midiLearn;
+    const int  cc = learn.ccFor (paramID);
+    const bool learningThis = learn.learningID() == paramID;
+
+    juce::PopupMenu menu;
+    menu.addSectionHeader (learn.nameOf (paramID).toUpperCase() + (cc >= 0 ? "  -  CC " + juce::String (cc) : juce::String()));
+    menu.addItem (1, learningThis ? "CANCEL MIDI LEARN" : "MIDI LEARN");
+    menu.addItem (2, cc >= 0 ? "FORGET CC " + juce::String (cc) : juce::String ("FORGET"), cc >= 0);
+    menu.showMenuAsync (juce::PopupMenu::Options().withTargetComponent (&control),
+                        [this, paramID, learningThis] (int result)
+                        {
+                            if (result == 1 && learningThis) processor.midiLearn.cancelLearning();
+                            else if (result == 1)            processor.midiLearn.startLearning (paramID);
+                            else if (result == 2)            processor.midiLearn.forget (paramID);
+                        });
+}
+
+// Called by the timer: blinks the control that waits for a CC, shows what was learned,
+// and puts each control's CC into its tooltip.
+void Zadabar64Editor::refreshLearnState()
+{
+    auto& learn = processor.midiLearn;
+    const auto learningID = learn.learningID();
+    auto restore = [] (juce::Component* c) { if (c != nullptr) c->setAlpha (c->isEnabled() ? 1.0f : 0.3f); };
+
+    if (blinkingID != learningID)
+    {
+        if (auto it = learnControls.find (blinkingID); it != learnControls.end())
+            restore (it->second.control.getComponent());
+        blinkingID = learningID;
+    }
+    if (learningID.isNotEmpty())
+        if (auto it = learnControls.find (learningID); it != learnControls.end())
+            if (auto* c = it->second.control.getComponent())
+                c->setAlpha ((ticks / 8) % 2 == 0 ? 1.0f : 0.25f);
+
+    if (learn.learnCount() != learnCount)
+    {
+        learnCount = learn.learnCount();
+        const auto mapped = learn.mappings();
+        for (const auto& [cc, id] : mapped)
+            if (cc == learn.lastLearnedCC())
+                timedMessage = "CC " + juce::String (cc) + " -> " + learn.nameOf (id).toUpperCase();
+        messageTicks = 75;
+    }
+
+    if (learningID.isNotEmpty())
+        headerState.message = "MIDI LEARN: MOVE A CONTROL FOR " + learn.nameOf (learningID).toUpperCase();
+    else if (messageTicks > 0)
+    {
+        --messageTicks;
+        headerState.message = timedMessage;
+    }
+    else
+        headerState.message.clear();
+
+    if (learn.version() == learnVersion)
+        return;
+    learnVersion = learn.version();
+
+    for (auto& [id, tagged] : learnControls)
+    {
+        const int cc = learn.ccFor (id);
+        auto tip = tagged.tooltip;
+        if (cc >= 0)
+            tip = "MIDI CC " + juce::String (cc) + (tip.isNotEmpty() ? ". " + tip : juce::String());
+        if (auto* c = tagged.control.getComponent())
+        {
+            if (auto* client = dynamic_cast<juce::SettableTooltipClient*> (c))
+                client->setTooltip (tip);
+            else if (auto* seg = dynamic_cast<SegmentedChoice*> (c))
+                seg->setTooltip (tip);
+        }
+    }
+
+    juce::StringArray lines;
+    for (const auto& [cc, id] : learn.mappings())
+        lines.add ("CC " + juce::String (cc).paddedLeft (' ', 3) + "  " + learn.nameOf (id).toUpperCase());
+    setupPage.setMidiMappings (lines);
 }
 
 juce::Rectangle<int> Zadabar64Editor::contentOf (juce::Rectangle<int> panel) const
@@ -426,13 +581,20 @@ void Zadabar64Editor::resized()
     {
         drumPanel   = take (middle, 7.0f);
         filterPanel = middle;
-        oscPanel = envPanel = modPanel = vibPanel = arpPanel = glidePanel = {};
+        oscPanel = envPanel = modPanel = vibPanel = arpPanel = glidePanel = wheelPanel = bendPanel = {};
     }
     else
     {
         auto rowA = middle.removeFromTop (middle.getHeight() * 57 / 100);
         middle.removeFromTop (Layout::gap);
         auto rowB = middle;
+
+        // the CHIP and OUT columns split too: WHEEL under CHIP, BEND under OUT
+        const int rowAHeight = rowA.getHeight() + Layout::gap;
+        wheelPanel = chipPanel.withTrimmedTop (rowAHeight);
+        chipPanel  = chipPanel.withHeight (rowA.getHeight());
+        bendPanel  = outPanel.withTrimmedTop (rowAHeight);
+        outPanel   = outPanel.withHeight (rowA.getHeight());
 
         oscPanel    = take (rowA, 2.4f);
         envPanel    = take (rowA, 4.6f);
@@ -514,6 +676,15 @@ void Zadabar64Editor::resized()
         g.removeFromTop (6);
         glideMode.setBounds (g.removeFromTop (28));
         layoutKnobRow (g.removeFromBottom (Layout::knobCell), { &glideTime });
+
+        auto w = contentOf (wheelPanel);
+        wheelCaption.setBounds (w.removeFromTop (14));
+        wheelDest.setBounds (w.removeFromTop (28));
+        layoutKnobRow (w.removeFromBottom (Layout::knobCell), { &wheelAmount });
+
+        auto b = contentOf (bendPanel);
+        bendTarget.setBounds (b.removeFromTop (28));
+        layoutKnobRow (b.removeFromBottom (Layout::knobCell), { &bendUp, &bendDown });
     }
 
     // --- filter
@@ -556,6 +727,8 @@ void Zadabar64Editor::paint (juce::Graphics& g)
 
     skin->paintHeader (g, headerArea, logoArea, infoArea, headerState);
     skin->paintStatusStrip (g, stripTextArea, headerState);
+    if (headerState.message.isNotEmpty())
+        skin->paintStatusMessage (g, stripTextArea, headerState.message);
 }
 
 void Zadabar64Editor::paintStatic (juce::Graphics& g)
@@ -575,6 +748,8 @@ void Zadabar64Editor::paintStatic (juce::Graphics& g)
         skin->paintPanel (g, vibPanel, "VIBRATO", Section::Vibrato);
         skin->paintPanel (g, arpPanel, "ARP", Section::Arp);
         skin->paintPanel (g, glidePanel, "GLIDE", Section::Glide);
+        skin->paintPanel (g, wheelPanel, "WHEEL", Section::Midi);
+        skin->paintPanel (g, bendPanel, "BEND", Section::Midi);
     }
     skin->paintPanel (g, filterPanel, "FILTER", Section::Filter);
     skin->paintPanel (g, outPanel, "OUT", Section::Out);

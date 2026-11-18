@@ -61,7 +61,7 @@ void SkinReady::paintHeader (juce::Graphics& g, juce::Rectangle<int>, juce::Rect
     // info: banner + voice activity
     auto top = info.removeFromTop (info.getHeight() / 2);
     g.setFont (font (16.0f));
-    g.drawFittedText ("**** RESIDFP SID V0.3 ****", top, juce::Justification::centredBottom, 1, 0.5f);
+    g.drawFittedText ("**** RESIDFP SID " + shortVersion() + " ****", top, juce::Justification::centredBottom, 1, 0.5f);
 
     g.setFont (font (8.0f));
     auto row = info.withSizeKeepingCentre (130, 16);

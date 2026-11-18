@@ -2,6 +2,33 @@
 
 All notable changes to Zadabar64. Versions follow `project(Zadabar64 VERSION …)` in `CMakeLists.txt`.
 
+## 0.4.0 – play it live
+
+### Mod wheel and pitch bend
+- New **WHEEL** panel: the mod wheel (CC 1) moves vibrato, cutoff, resonance, pulse width or
+  MOD PITCH (a hard-sync sweep), with an amount from −100 to +100 %. Wheel vibrato starts right
+  away, without the vibrato delay. The knobs themselves don't move.
+- New **BEND** panel: separate up and down ranges (0–24 semitones, default 2), on the note's
+  pitch or only on the ring/sync modulator (a sync sweep on the bender).
+- Both are part of instrument patches. SYNC SCREAMER and SYNC BASS sweep the sync, ACID SID BASS
+  and PULSE BASS open the filter, THIN PULSE LEAD fattens the pulse. Older patches load the
+  defaults (wheel → vibrato +50 %, bend ±2).
+- Reset All Controllers (CC 121) recentres the wheel and the bender. Drum mode ignores both.
+
+### MIDI learn
+- Right-click any knob, switch, list or drum level fader → **MIDI LEARN**, then move a control on
+  your MIDI controller. **FORGET** removes it. Hovering a control shows its CC.
+- Any MIDI channel, CC 0–119 (120–127 are channel commands). One CC per parameter; learning a CC
+  that is already used moves it. A learned CC 1 replaces the mod wheel routing.
+- The map is saved with the project. **SETUP → MIDI** lists it, with FORGET ALL and SET AS
+  DEFAULT (the map new instances start with).
+
+### Other
+- A right-click no longer toggles buttons or moves knobs.
+- Release ZIP: paths inside the archive now use "/", so it unpacks correctly with 7-Zip, macOS
+  and Linux tools too.
+- The version shown in the plugin comes from the build.
+
 ## 0.3.0 – first public release
 
 ### Drum machine

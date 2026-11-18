@@ -33,7 +33,9 @@ juce::StringArray PatchManager::paramIDs (PatchType t)
                         ParamID::ring, ParamID::sync, ParamID::modPitch, ParamID::modFine,
                         ParamID::vibDepth, ParamID::vibSpeed, ParamID::vibDelay,
                         ParamID::playMode, ParamID::glideMode, ParamID::glideTime,
-                        ParamID::arpMode, ParamID::arpPattern, ParamID::arpSpeed });
+                        ParamID::arpMode, ParamID::arpPattern, ParamID::arpSpeed,
+                        ParamID::wheelDest, ParamID::wheelAmount,
+                        ParamID::bendUp, ParamID::bendDown, ParamID::bendTarget });
     }
     else
     {

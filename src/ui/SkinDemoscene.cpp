@@ -48,6 +48,7 @@ juce::Colour SkinDemoscene::accent (Section s)
         case Section::Vibrato:return juce::Colour (0xff7fd1c7);
         case Section::Glide:  return juce::Colour (0xffc9b0f0);
         case Section::Arp:    return juce::Colour (0xfff0a35e);
+        case Section::Midi:   return juce::Colour (0xff8fb8f0);
     }
     return cyan;
 }

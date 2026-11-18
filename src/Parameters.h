@@ -45,7 +45,24 @@ namespace ParamID
     inline constexpr auto arpMode     = "arpMode";
     inline constexpr auto arpPattern  = "arpPattern";
     inline constexpr auto arpSpeed    = "arpSpeed";
+
+    // MIDI performance controls (instrument mode)
+    inline constexpr auto wheelDest   = "wheelDest";
+    inline constexpr auto wheelAmount = "wheelAmount";
+    inline constexpr auto bendUp      = "bendUp";
+    inline constexpr auto bendDown    = "bendDown";
+    inline constexpr auto bendTarget  = "bendTarget";
 }
+
+// ---------------------------------------------------------------- Mod wheel
+// What the mod wheel (CC 1) moves, and how far at full wheel (WHEEL AMOUNT 100 %).
+enum class WheelDest { Vibrato = 0, Cutoff, Resonance, PulseWidth, ModPitch };
+inline const juce::StringArray wheelDestNames { "Vibrato", "Cutoff", "Resonance", "Pulse Width", "Mod Pitch" };
+inline constexpr double wheelVibratoCents = 100.0;   // VIBRATO: wheel vibrato depth at 100 %
+inline constexpr double wheelModSemis     = 24.0;    // MOD PITCH: semitones at 100 % (sync sweeps)
+
+// Pitch bend moves the note, or only the ring/sync modulator (MOD PITCH).
+enum class BendTarget { Pitch = 0, ModPitch = 1 };
 
 // ---------------------------------------------------------------- Arpeggio
 // The C64 "chord": one voice steps through the notes of a chord, one step every
@@ -256,6 +273,18 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
         AudioParameterIntAttributes().withStringFromValueFunction (
             [] (int v, int) { return String (v) + (v == 1 ? " FRAME" : " FRAMES"); })));
 
+    // --- Mod wheel and pitch bend
+    layout.add (std::make_unique<AudioParameterChoice> (pid (ParamID::wheelDest), "Wheel Destination", wheelDestNames, 0));
+    layout.add (std::make_unique<AudioParameterFloat> (pid (ParamID::wheelAmount), "Wheel Amount",
+                                                       NormalisableRange<float> { -100.0f, 100.0f }, 50.0f,
+        AudioParameterFloatAttributes().withStringFromValueFunction (
+            [] (float v, int) { const int i = roundToInt (v); return (i > 0 ? "+" : "") + String (i) + "%"; })
+        .withValueFromStringFunction ([] (const String& t) { return t.retainCharacters ("-0123456789.").getFloatValue(); })));
+    auto semisAttr = AudioParameterIntAttributes().withStringFromValueFunction ([] (int v, int) { return String (v) + " ST"; });
+    layout.add (std::make_unique<AudioParameterInt> (pid (ParamID::bendUp),   "Bend Up",   0, 24, 2, semisAttr));
+    layout.add (std::make_unique<AudioParameterInt> (pid (ParamID::bendDown), "Bend Down", 0, 24, 2, semisAttr));
+    layout.add (std::make_unique<AudioParameterChoice> (pid (ParamID::bendTarget), "Bend Target", StringArray { "Pitch", "Mod Pitch" }, 0));
+
     // --- Drum kit
     for (int d = 0; d < numDrums; ++d)
     {
@@ -321,6 +350,11 @@ struct Params
         arpMode    = s.getRawParameterValue (ParamID::arpMode);
         arpPattern = s.getRawParameterValue (ParamID::arpPattern);
         arpSpeed   = s.getRawParameterValue (ParamID::arpSpeed);
+        wheelDest   = s.getRawParameterValue (ParamID::wheelDest);
+        wheelAmount = s.getRawParameterValue (ParamID::wheelAmount);
+        bendUp      = s.getRawParameterValue (ParamID::bendUp);
+        bendDown    = s.getRawParameterValue (ParamID::bendDown);
+        bendTarget  = s.getRawParameterValue (ParamID::bendTarget);
 
         for (int d = 0; d < numDrums; ++d)
         {
@@ -357,6 +391,11 @@ struct Params
     std::atomic<float>* arpMode    = nullptr;  // ArpMode
     std::atomic<float>* arpPattern = nullptr;  // index into arpPatterns
     std::atomic<float>* arpSpeed   = nullptr;  // frames per step
+    std::atomic<float>* wheelDest   = nullptr; // WheelDest
+    std::atomic<float>* wheelAmount = nullptr; // -100..100 %
+    std::atomic<float>* bendUp      = nullptr; // semitones
+    std::atomic<float>* bendDown    = nullptr; // semitones
+    std::atomic<float>* bendTarget  = nullptr; // BendTarget
 
     std::atomic<float>& mode;
 

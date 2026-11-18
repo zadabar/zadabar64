@@ -19,13 +19,14 @@ SegmentedChoice::SegmentedChoice (juce::AudioProcessorValueTreeState& state, con
                                   const juce::StringArray& labels, Section section, float fontSize)
 {
     setSection (*this, section);
+    setParamID (*this, paramID);
     auto* param = state.getParameter (paramID);
     jassert (param != nullptr);
     numOptions = labels.size();
 
     for (int i = 0; i < labels.size(); ++i)
     {
-        auto* b = buttons.add (new juce::TextButton (labels[i]));
+        auto* b = buttons.add (new LearnButton (labels[i]));
         b->setClickingTogglesState (false);
         b->getProperties().set ("fontSize", fontSize);
         b->onClick = [this, i] { if (attachment != nullptr) attachment->setValueAsCompleteGesture (static_cast<float> (i)); };
@@ -39,6 +40,12 @@ SegmentedChoice::SegmentedChoice (juce::AudioProcessorValueTreeState& state, con
             buttons[i]->setToggleState (i == sel, juce::dontSendNotification);
     });
     attachment->sendInitialUpdate();
+}
+
+void SegmentedChoice::setTooltip (const juce::String& text)
+{
+    for (auto* b : buttons)
+        b->setTooltip (text);
 }
 
 void SegmentedChoice::resized()
@@ -366,7 +373,8 @@ DrumPads::DrumPads (Zadabar64Processor& p, std::function<void (int)> cb)
 
     for (int i = 0; i < numDrums; ++i)
     {
-        auto* sl = levels.add (new juce::Slider (juce::Slider::LinearHorizontal, juce::Slider::NoTextBox));
+        auto* sl = levels.add (new LearnSlider (juce::Slider::LinearHorizontal, juce::Slider::NoTextBox));
+        setParamID (*sl, drumParam (i, "level"));
         sl->setPopupDisplayEnabled (true, true, this);
         sl->setDoubleClickReturnValue (true, 0.0);
         sl->setTitle (juce::String (drumNames[i]) + " level");

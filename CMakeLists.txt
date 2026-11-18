@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(Zadabar64 VERSION 0.3.0 LANGUAGES C CXX)
+project(Zadabar64 VERSION 0.4.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -45,6 +45,7 @@ target_sources(Zadabar64 PRIVATE
     src/PluginProcessor.cpp
     src/PluginEditor.cpp
     src/Settings.cpp
+    src/MidiLearn.cpp
     src/sid/SidChip.cpp
     src/player/Player.cpp
     src/ui/Skin.cpp

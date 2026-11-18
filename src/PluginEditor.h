@@ -17,6 +17,7 @@ namespace zadabar
 {
 
 class Zadabar64Editor : public juce::AudioProcessorEditor,
+                        public LearnHost,
                         private juce::Timer,
                         private juce::ChangeListener
 {
@@ -32,6 +33,9 @@ public:
     void showSetup (bool shouldShow);
     void applySkin (int index);
 
+    // MIDI learn menu (right-click on a control)
+    void showLearnMenu (juce::Component&, const juce::String& paramID) override;
+
 private:
     using SliderAttachment = juce::AudioProcessorValueTreeState::SliderAttachment;
     using ComboAttachment  = juce::AudioProcessorValueTreeState::ComboBoxAttachment;
@@ -39,7 +43,7 @@ private:
 
     struct Knob
     {
-        juce::Slider slider;
+        LearnSlider slider;
         juce::Label  label;
         std::unique_ptr<SliderAttachment> attachment;
     };
@@ -50,6 +54,14 @@ private:
     void updateVisibility();
     void timerCallback() override;
     void changeListenerCallback (juce::ChangeBroadcaster*) override;
+
+    // MIDI learn: every control that edits a parameter, for tooltips and the blinking learn target
+    void tagControl (juce::Component&, const juce::String& paramID, const juce::String& tooltip = {});
+    void refreshLearnState();
+    struct Tagged { juce::Component::SafePointer<juce::Component> control; juce::String tooltip; };
+    std::map<juce::String, Tagged> learnControls;
+    int learnVersion = -1, learnCount = 0, messageTicks = 0;
+    juce::String blinkingID, timedMessage;
 
     void layoutKnobRow (juce::Rectangle<int>, std::initializer_list<Knob*>);
     juce::Rectangle<int> contentOf (juce::Rectangle<int> panel) const;
@@ -71,7 +83,7 @@ private:
 
     // oscillator
     juce::Label    waveCaption;
-    juce::ComboBox waveform;
+    LearnCombo     waveform;
     std::unique_ptr<ComboAttachment> waveformAttachment;
     Knob pulseWidth, pwmSpeed;
 
@@ -81,7 +93,7 @@ private:
     Knob attack, decay, sustain, release;
 
     // ring mod / sync
-    juce::TextButton ringButton { "RING" }, syncButton { "SYNC" };
+    LearnButton ringButton { "RING" }, syncButton { "SYNC" };
     std::unique_ptr<ButtonAttachment> ringAttachment, syncAttachment;
     Knob modPitch, modFine;
     juce::Label ringHint;
@@ -95,13 +107,21 @@ private:
 
     // arpeggio
     SegmentedChoice arpMode;
-    juce::ComboBox arpPattern;
+    LearnCombo arpPattern;
     std::unique_ptr<ComboAttachment> arpPatternAttachment;
     Knob arpSpeed;
 
+    // mod wheel and pitch bend
+    juce::Label wheelCaption;
+    LearnCombo  wheelDest;
+    std::unique_ptr<ComboAttachment> wheelDestAttachment;
+    Knob wheelAmount;
+    SegmentedChoice bendTarget;
+    Knob bendUp, bendDown;
+
     // filter
     SegmentedChoice  filterMode;
-    juce::TextButton filterOn { "FILTER ON" };
+    LearnButton      filterOn { "FILTER ON" };
     std::unique_ptr<ButtonAttachment> filterOnAttachment;
     Knob cutoff, resonance;
 
@@ -113,7 +133,7 @@ private:
     DrumPads       drumPads;
     DrumView       drumView;
     juce::Label    drumName, drumWaveCaption;
-    juce::ComboBox drumWave;
+    LearnCombo     drumWave;
     std::unique_ptr<ComboAttachment> drumWaveAttachment;
     Knob drumTune, drumDecay, drumSweep, drumNoise;
 
@@ -131,7 +151,7 @@ private:
     juce::String headerSignature;
     SavePatchDialog saveDialog;
     juce::Rectangle<int> chipPanel, oscPanel, envPanel, filterPanel, outPanel, drumPanel;
-    juce::Rectangle<int> modPanel, vibPanel, arpPanel, glidePanel;
+    juce::Rectangle<int> modPanel, vibPanel, arpPanel, glidePanel, wheelPanel, bendPanel;
 
     bool setupOpen = false;
     int  shownMode = -1;

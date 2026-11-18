@@ -26,6 +26,10 @@ public:
     std::function<void (int)> onTimingChosen;
     std::function<void()>     onClose;
 
+    // MIDI learn: the current map ("CC  21  CUTOFF"), and its two buttons
+    void setMidiMappings (const juce::StringArray& lines);
+    std::function<void()> onForgetAllMidi, onSaveMidiDefault;
+
     void paint (juce::Graphics&) override;
     void resized() override;
 
@@ -37,6 +41,10 @@ private:
     juce::Rectangle<int> timingHelpArea;
     juce::TextButton timingLive { "LIVE" }, timingTight { "TIGHT" };
     juce::TextButton closeButton { "CLOSE" };
+    juce::Label      midiHeading;
+    juce::TextButton midiForgetAll { "FORGET ALL" }, midiSaveDefault { "SET AS DEFAULT" };
+    juce::Rectangle<int> midiHelpArea, midiListArea;
+    juce::StringArray midiLines;
 };
 
 } // namespace zadabar

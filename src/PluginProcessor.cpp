@@ -25,6 +25,7 @@ Zadabar64Processor::Zadabar64Processor()
       params (apvts)
 {
     settings->addChangeListener (this);
+    midiLearn.fromString (settings->getMidiMap());   // the user's default map
 }
 
 Zadabar64Processor::~Zadabar64Processor()
@@ -151,6 +152,12 @@ void Zadabar64Processor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
 
     keyboardState.processNextMidiBuffer (midi, 0, numSamples, true);
 
+    // MIDI learn: learned controllers move their parameters (before the block's
+    // parameters are read, so they count from this block on). They are not
+    // passed on to the player: a learned CC 1 replaces the mod wheel routing.
+    for (const auto meta : midi)
+        midiLearn.handle (meta.getMessage());
+
     if (! beginStructureChange (numSamples))
     {
         reconfigureChip();
@@ -183,7 +190,9 @@ void Zadabar64Processor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
                 player.render (offset (chipOut, pos).data(), eventPos - pos);
                 pos = eventPos;
             }
-            player.handleMidi (meta.getMessage());
+            const auto msg = meta.getMessage();
+            if (! midiLearn.isMapped (msg))
+                player.handleMidi (msg);
         }
         if (pos < numSamples)
             player.render (offset (chipOut, pos).data(), numSamples - pos);
@@ -194,7 +203,7 @@ void Zadabar64Processor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
         for (const auto meta : midi)
         {
             const auto msg = meta.getMessage();
-            if (msg.getRawDataSize() > 3 || queueCount >= queueSize)
+            if (msg.getRawDataSize() > 3 || queueCount >= queueSize || midiLearn.isMapped (msg))
                 continue;   // sysex etc. is not used; queue full = drop (never happens in practice)
 
             auto& e = queue[(size_t) ((queueHead + queueCount) % queueSize)];
@@ -354,6 +363,7 @@ void Zadabar64Processor::getStateInformation (juce::MemoryBlock& destData)
     auto state = apvts.copyState();
     state.setProperty ("selectedDrum", selectedDrum.load(), nullptr);
     patches.writeState (state);
+    midiLearn.writeState (state);
     if (auto xml = state.createXml())
         copyXmlToBinary (*xml, destData);
 }
@@ -364,6 +374,9 @@ void Zadabar64Processor::setStateInformation (const void* data, int sizeInBytes)
         if (xml->hasTagName (apvts.state.getType()))
         {
             auto state = juce::ValueTree::fromXml (*xml);
+            midiLearn.readState (state);   // older projects have no map: keep the default one
+            if (auto learnTree = state.getChildWithName (MidiLearn::stateTag); learnTree.isValid())
+                state.removeChild (learnTree, nullptr);
             selectedDrum = juce::jlimit (0, numDrums - 1, static_cast<int> (state.getProperty ("selectedDrum", 0)));
             apvts.replaceState (state);
             patches.readState (state);

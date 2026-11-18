@@ -123,6 +123,14 @@ Boomy 6581, Electro 64, Lofi Saw ...) or build and save your own.
 - **FIXED**: 11 patterns (major, minor, octave, 7ths ...)
 - 1–4 frames per step, timed from the note start, **frame-exact**
 
+**Play it live: wheel, bend, MIDI learn**
+- **Mod wheel** to vibrato, cutoff, resonance, pulse width or **MOD PITCH** (a hard-sync sweep),
+  with a bipolar amount, set per patch
+- **Pitch bend** with separate up/down range (0–24 semitones), on the note or only on the
+  ring/sync modulator
+- **MIDI learn**: right-click any knob, switch or list, move a control on your controller.
+  Saved with the project; set a default map for new instances under SETUP
+
 **Everything else**
 - 21 factory patches, save your own
 - Knobs that can't change the sound right now are dimmed
@@ -322,11 +330,12 @@ muted, lets the chips settle, re-centres its DC blocker on the new level and fad
 | Path | What it is |
 |---|---|
 | `src/PluginProcessor.*` | Audio processing, chip mixing, state, the switching fade |
-| `src/player/` | The player routine: voices, drums, arpeggio, vibrato, glide, frame ticks |
+| `src/player/` | The player routine: voices, drums, arpeggio, vibrato, glide, mod wheel, pitch bend, frame ticks |
 | `src/sid/SidChip.*` | Thin wrapper around one reSIDfp chip |
 | `src/patches/` | Patch manager and the factory patches |
 | `src/ui/` | Editor widgets, the three skins, setup page, patch bar |
 | `src/Parameters.h` | All parameters, ranges and display texts |
+| `src/MidiLearn.*` | MIDI learn: CC → parameter map, saved with the project |
 | `cmake/libresidfp.cmake` | Builds libresidfp without autotools |
 | `resources/` | Pixel font (with its licence), logo and icons |
 | `release/` | Release ZIP script, INSTALL/README templates, licence texts |

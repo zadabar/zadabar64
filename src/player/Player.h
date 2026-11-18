@@ -27,6 +27,9 @@ struct PlayerDisplay
         std::atomic<int>     pulseWidth { 2048 }; // instrument: current pulse width (moves with PWM)
     };
 
+    std::atomic<float>               wheel { 0.0f };   // mod wheel 0..1
+    std::atomic<float>               bend  { 0.0f };   // pitch bend -1..+1
+
     std::array<Voice, 3>             voices;
     std::array<std::atomic<int64_t>, numDrums> drumTriggeredAt {};
     std::atomic<int64_t>             clock      { 0 };
@@ -146,6 +149,10 @@ private:
     void writeFrequency (int v);
     void writeControl (int v);
     void writePulseWidth (int v);
+    void writeFilter();
+    void refreshModulation();
+    void updateBend();
+    double wheelVibrato() const noexcept;   // semitones of mod-wheel vibrato
     void setGate (int v, bool on);
     void scheduleParking (int v, float releaseMs);
     void park (int v);
@@ -200,7 +207,24 @@ private:
     double   samplesToNextFrame = 0.0;
     uint32_t eventCounter       = 0;
     int64_t  clock              = 0;
-    float    pitchBendSemis     = 0.0f;
+    float    pitchBendSemis     = 0.0f;   // pitch bend on the note
+    float    modBendSemis       = 0.0f;   // pitch bend on the modulator (BEND -> MOD PITCH)
+
+    // mod wheel and pitch bend (MIDI)
+    double   wheelValue   = 0.0;     // 0..1
+    double   bendValue    = 0.0;     // -1..+1
+    WheelDest wheelDest   = WheelDest::Vibrato;
+    double   wheelAmount  = 0.5;     // -1..+1
+    int      bendUp = 2, bendDown = 2;
+    bool     bendToMod    = false;
+    double   wheelOn (WheelDest d) const noexcept
+    {
+        return mode == Mode::Instrument && wheelDest == d ? wheelAmount * wheelValue : 0.0;
+    }
+
+    // filter settings from the knobs (the wheel can move cutoff and resonance)
+    int      baseCutoff = 1024, baseResonance = 8;
+    uint8_t  filterRouting = 0, filterModeVol = 0x1f;
 
     // Latest instrument parameter values, cached for the frame tick.
     uint8_t  waveBits     = Ctrl::pulse;

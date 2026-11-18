@@ -6,6 +6,7 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 
+#include "MidiLearn.h"
 #include "Parameters.h"
 #include "Settings.h"
 #include "patches/Patches.h"
@@ -54,6 +55,7 @@ public:
 
     juce::AudioProcessorValueTreeState apvts;
     PatchManager patches { apvts };
+    MidiLearn midiLearn { *this };                   // CC -> parameter (saved with the project)
     juce::MidiKeyboardState keyboardState;
 
     // For the UI

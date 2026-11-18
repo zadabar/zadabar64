@@ -29,6 +29,10 @@ public:
     int  getTiming() const;
     void setTiming (int timing);
 
+    // MIDI learn map used by new instances (see MidiLearn::toString)
+    juce::String getMidiMap() const;
+    void setMidiMap (const juce::String&);
+
 private:
     juce::ApplicationProperties props;
 };

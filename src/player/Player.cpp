@@ -42,6 +42,9 @@ void Player::prepare (double hostSampleRate, VideoStandard standard)
     samplesPerFrame    = hostSampleRate / frameHz;
     samplesToNextFrame = samplesPerFrame;
     pitchBendSemis     = 0.0f;
+    modBendSemis       = 0.0f;
+    wheelValue = bendValue = 0.0;
+    display.wheel = display.bend = 0.0f;
     display.sampleRate = hostSampleRate;
 
     // The chips were just reset: every register is 0, i.e. every voice is
@@ -112,16 +115,19 @@ void Player::applyParams (const Params& p)
 
     // Instrument: only voice 1 (the note) goes through the filter; voice 3 is the
     // muted modulator (3OFF only mutes a voice that is not routed to the filter).
-    const bool    modLayout = ! isDrums && ! sharedChip;
-    const uint8_t routing = filterOn ? (modLayout ? 0x01 : 0x07) : 0x00;
-    const uint8_t modeVol = static_cast<uint8_t> (filterModeBits[fmode] | volume | (modLayout ? voice3Off : 0));
-    for (auto* c : chips)
-    {
-        c->writeIfChanged (Reg::fcLo, static_cast<uint8_t> (cutoff & 0x07));
-        c->writeIfChanged (Reg::fcHi, static_cast<uint8_t> (cutoff >> 3));
-        c->writeIfChanged (Reg::resFilt, static_cast<uint8_t> ((resonance << 4) | routing));
-        c->writeIfChanged (Reg::modeVolume, modeVol);
-    }
+    const bool modLayout = ! isDrums && ! sharedChip;
+    baseCutoff    = cutoff;
+    baseResonance = resonance;
+    filterRouting = filterOn ? (modLayout ? 0x01 : 0x07) : 0x00;
+    filterModeVol = static_cast<uint8_t> (filterModeBits[fmode] | volume | (modLayout ? voice3Off : 0));
+
+    wheelDest   = static_cast<WheelDest> (std::clamp (Params::asInt (*p.wheelDest), 0, 4));
+    wheelAmount = std::clamp (p.wheelAmount->load() / 100.0, -1.0, 1.0);
+    bendUp      = std::clamp (Params::asInt (*p.bendUp), 0, 24);
+    bendDown    = std::clamp (Params::asInt (*p.bendDown), 0, 24);
+    bendToMod   = Params::asInt (*p.bendTarget) == static_cast<int> (BendTarget::ModPitch);
+    updateBend();
+    writeFilter();
 
     if (isDrums)
     {
@@ -197,12 +203,65 @@ void Player::handleMidi (const juce::MidiMessage& m, int reservedVoice)
         noteOff (m.getNoteNumber());
     else if (m.isAllNotesOff() || m.isAllSoundOff())
         allNotesOff();
-    else if (m.isPitchWheel() && mode == Mode::Instrument)
+    else if (m.isPitchWheel())
     {
-        pitchBendSemis = 2.0f * (static_cast<float> (m.getPitchWheelValue()) - 8192.0f) / 8192.0f;
-        for (int v = 0; v < numVoices; ++v)
-            if (! voice (v).parked)
-                writeFrequency (v);
+        bendValue = std::clamp ((m.getPitchWheelValue() - 8192) / 8191.0, -1.0, 1.0);   // 0x2000 = centre
+        updateBend();
+        refreshModulation();
+    }
+    else if (m.isControllerOfType (1))   // mod wheel
+    {
+        wheelValue = m.getControllerValue() / 127.0;
+        refreshModulation();
+    }
+    else if (m.isResetAllControllers())
+    {
+        wheelValue = bendValue = 0.0;
+        updateBend();
+        refreshModulation();
+    }
+    display.wheel = static_cast<float> (wheelValue);
+    display.bend  = static_cast<float> (bendValue);
+}
+
+// Pitch bend in semitones: BEND UP / DOWN at full throw, on the note or on the modulator.
+void Player::updateBend()
+{
+    const double semis = bendValue >= 0.0 ? bendValue * bendUp : bendValue * bendDown;
+    pitchBendSemis = bendToMod ? 0.0f : static_cast<float> (semis);
+    modBendSemis   = bendToMod ? static_cast<float> (semis) : 0.0f;
+}
+
+// The wheel or the bender moved: apply it right away (vibrato also moves per frame).
+void Player::refreshModulation()
+{
+    writeFilter();
+    if (mode == Mode::Drums)
+        return;
+    for (int v = 0; v < numVoices; ++v)
+    {
+        writePulseWidth (v);
+        if (! voice (v).parked)
+            writeFrequency (v);
+    }
+}
+
+double Player::wheelVibrato() const noexcept
+{
+    return std::abs (wheelOn (WheelDest::Vibrato)) * wheelVibratoCents / 100.0;
+}
+
+// Cutoff and resonance from the knobs, plus the mod wheel (instrument mode).
+void Player::writeFilter()
+{
+    const int cutoff    = std::clamp (baseCutoff + static_cast<int> (std::lround (wheelOn (WheelDest::Cutoff) * 2047.0)), 0, 2047);
+    const int resonance = std::clamp (baseResonance + static_cast<int> (std::lround (wheelOn (WheelDest::Resonance) * 15.0)), 0, 15);
+    for (auto* c : chips)
+    {
+        c->writeIfChanged (Reg::fcLo, static_cast<uint8_t> (cutoff & 0x07));
+        c->writeIfChanged (Reg::fcHi, static_cast<uint8_t> (cutoff >> 3));
+        c->writeIfChanged (Reg::resFilt, static_cast<uint8_t> ((resonance << 4) | filterRouting));
+        c->writeIfChanged (Reg::modeVolume, filterModeVol);
     }
 }
 
@@ -508,12 +567,15 @@ void Player::writeFrequency (int v)
     const auto& vc = voice (v);
     double p = vc.pitch + arpOffset (v) + static_cast<double> (pitchBendSemis);
 
+    // vibrato: the VIBRATO knobs (after the delay) plus the mod wheel (right away)
     const double vibOnMs = vc.framesOn * samplesPerFrame * 1000.0 / sampleRate;
-    if (vibDepth > 0.0 && vibOnMs >= vibDelayMs)
-        p += vibDepth * triangle (vc.vibPhase);
+    const double depth = (vibOnMs >= vibDelayMs ? vibDepth : 0.0) + wheelVibrato();
+    if (depth > 0.0)
+        p += depth * triangle (vc.vibPhase);
 
-    const double carrierNote   = syncOn ? p + modOffset : p;
-    const double modulatorNote = syncOn ? p : p + modOffset;
+    const double mod = modOffset + modBendSemis + wheelOn (WheelDest::ModPitch) * wheelModSemis;
+    const double carrierNote   = syncOn ? p + mod : p;
+    const double modulatorNote = syncOn ? p : p + mod;
 
     auto& c = chipOf (v);
     const uint16_t cr = c.frequencyToRegister (noteToHz (carrierNote));
@@ -538,7 +600,8 @@ void Player::writeControl (int v)
 
 void Player::writePulseWidth (int v)
 {
-    const int pw = std::clamp (voice (v).pulseWidth, 0, 4095);
+    const int wheelPw = static_cast<int> (std::lround (wheelOn (WheelDest::PulseWidth) * 2048.0));
+    const int pw = std::clamp (voice (v).pulseWidth + wheelPw, 0, 4095);
     display.voices[(size_t) v].pulseWidth = pw;
     chipOf (v).writeIfChanged (noteReg (v) + Reg::pwLo, static_cast<uint8_t> (pw & 0xff));
     chipOf (v).writeIfChanged (noteReg (v) + Reg::pwHi, static_cast<uint8_t> (pw >> 8));
@@ -727,7 +790,7 @@ void Player::frameTick()
 
         // vibrato: triangle LFO, starts after the delay
         ++vc.framesOn;
-        if (vibDepth > 0.0 && vc.framesOn * frameSeconds * 1000.0 >= vibDelayMs)
+        if ((vibDepth > 0.0 && vc.framesOn * frameSeconds * 1000.0 >= vibDelayMs) || wheelVibrato() > 0.0)
             vc.vibPhase = std::fmod (vc.vibPhase + vibSpeedHz * frameSeconds, 1.0);
 
         // PWM sweep
