@@ -1,0 +1,9 @@
+# Normalise line endings in the repository, check out natively.
+* text=auto
+
+*.ps1 text eol=crlf
+*.png binary
+*.wav binary
+*.ttf binary
+*.ico binary
+*.zip binary

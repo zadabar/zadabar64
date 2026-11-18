@@ -1,0 +1,213 @@
+
+      _____   ___    ____  ___    ____  ___    ____  _____ __ __
+     /__  /  /   |  / __ \/   |  / __ )/   |  / __ \/ ___// // /
+       / /  / /| | / / / / /| | / __  / /| | / /_/ / __ \/ // /_
+      / /__/ ___ |/ /_/ / ___ |/ /_/ / ___ |/ _, _/ /_/ /__  __/
+     /____/_/  |_/_____/_/  |_/_____/_/  |_/_/ |_|\____/  /_/
+
+  +----------------------------------------------------------------------+
+  |                                                                      |
+  |           **** ZADABAR64  SID SYNTH + DRUM MACHINE ****              |
+  |                                                                      |
+  |    64K RAM SYSTEM   6 SID CHIPS   18 VOICES   0 BYTES OF SAMPLES     |
+  |                                                                      |
+  |    READY.                                                            |
+  |    LOAD"INSTALL.TXT",8,1                                             |
+  |                                                                      |
+  |    SEARCHING FOR INSTALL.TXT                                         |
+  |    LOADING                                                           |
+  |    READY.                                                            |
+  |    RUN_                                                              |
+  |                                                                      |
+  +----------------------------------------------------------------------+
+
+                    INSTALLATION GUIDE  -  VERSION {VERSION}
+                      Windows 10 / 11, 64-bit, no installer
+
+
+  ======================================================================
+   1. WHAT'S IN THE BOX
+  ======================================================================
+
+     Zadabar64-{VERSION}-Windows-x64\
+      |
+      +-- Zadabar64.vst3\        the VST3 plug-in        (a FOLDER)
+      +-- Zadabar64.clap         the CLAP plug-in        (a file)
+      +-- Zadabar64.exe          the standalone app      (a file)
+      |
+      +-- INSTALL.txt            you are reading it
+      +-- README.txt             what Zadabar64 is, how to play it
+      +-- LICENSE.txt            GNU GPL v3 (Zadabar64 is free software)
+      +-- THIRD_PARTY_NOTICES.txt
+      +-- licenses\              licences of the parts inside Zadabar64
+
+     You don't need all three. Pick what you use:
+
+       * Cubase, Ableton Live, Studio One, FL Studio, Reaper,
+         Nuendo, Wavelab, Bitwig ...            -> VST3   (most people)
+       * Bitwig, Reaper, FL Studio and other
+         CLAP hosts                             -> CLAP   (optional)
+       * No DAW at all, just play               -> the standalone app
+
+     Nothing else is needed: no runtime, no driver, no account, no internet.
+
+
+  ======================================================================
+   2. BEFORE YOU START: UNBLOCK THE ZIP
+  ======================================================================
+
+     Windows marks files downloaded from the internet. To avoid warnings
+     and plug-ins that refuse to load:
+
+       1. Right-click the ZIP file  ->  Properties
+       2. At the bottom, tick  [x] Unblock  ->  OK
+       3. Right-click the ZIP  ->  Extract All...
+
+     (If there is no Unblock box, the file is fine. Just extract it.)
+
+
+  ======================================================================
+   3. INSTALL THE VST3 PLUG-IN
+  ======================================================================
+
+     Copy the whole  Zadabar64.vst3  FOLDER into:
+
+         C:\Program Files\Common Files\VST3\
+
+       1. Open the extracted folder.
+       2. Right-click  Zadabar64.vst3  ->  Copy.
+       3. Paste this into the Explorer address bar and press Enter:
+              C:\Program Files\Common Files\VST3
+       4. Right-click in the empty space  ->  Paste.
+          Windows asks for administrator permission: click Continue.
+
+     Result:   C:\Program Files\Common Files\VST3\Zadabar64.vst3\...
+
+     ! Copy the folder itself, not what is inside it.
+     ! Zadabar64 is 64-bit only. Every current DAW is 64-bit.
+
+
+  ======================================================================
+   4. INSTALL THE CLAP PLUG-IN  (optional)
+  ======================================================================
+
+     Copy  Zadabar64.clap  into:
+
+         C:\Program Files\Common Files\CLAP\
+
+     If the CLAP folder doesn't exist yet, create it (New -> Folder).
+     Cubase does not load CLAP plug-ins; use the VST3 there.
+
+
+  ======================================================================
+   5. THE STANDALONE APP  (optional)
+  ======================================================================
+
+     Zadabar64.exe runs from anywhere: keep it in the extracted folder
+     or move it wherever you like, e.g.  C:\Program Files\Zadabar64\
+
+       * Windows may say "Windows protected your PC" the first time.
+         The app is not code-signed (it's a free project). Click
+           More info  ->  Run anyway
+       * Click  Options  (top left)  ->  Audio/MIDI Settings
+         to pick your sound card and your MIDI keyboard.
+         No keyboard? Play with the mouse on the on-screen keys,
+         or with your computer keyboard.
+
+
+  ======================================================================
+   6. FIND IT IN YOUR DAW
+  ======================================================================
+
+     Most DAWs scan for new plug-ins when they start. If Zadabar64
+     doesn't show up, rescan:
+
+       Cubase / Nuendo   Restart it: Cubase scans at start-up. Check with
+                         Studio -> VST Plug-in Manager (Instruments, Zadabar)
+       Ableton Live      Settings -> Plug-Ins -> Use VST3 Plug-In System
+                         Folders: On -> Rescan
+       FL Studio         Options -> Manage plugins -> Find installed plugins
+       Reaper            Options -> Preferences -> Plug-ins -> VST
+                         -> Re-scan   (CLAP: Plug-ins -> CLAP)
+       Studio One        Restart it; or Options -> Locations
+                         -> VST Plug-Ins -> Reset Blocklist
+       Bitwig Studio     Settings -> Locations -> Plug-in Locations
+                         (VST3 and CLAP system folders are scanned)
+
+     Zadabar64 is an INSTRUMENT: load it on an instrument track.
+     Drum mode uses the General MIDI drum notes (kick on C1/36,
+     snare on D1/38, hats on F#1/42 and A#1/46, toms on A1/45 and C2/48).
+
+
+  ======================================================================
+   7. YOUR PATCHES
+  ======================================================================
+
+     Patches you save are plain files in your Documents folder:
+
+         Documents\Zadabar64\Instrument Patches\   *.z64patch
+         Documents\Zadabar64\Drum Kits\            *.z64kit
+
+     Back them up, share them, drop other people's patches in there.
+     Updating or removing Zadabar64 never touches this folder.
+
+
+  ======================================================================
+   8. UPDATING
+  ======================================================================
+
+       1. Close your DAW (it keeps the plug-in file locked).
+       2. Copy the new  Zadabar64.vst3  (and .clap / .exe) over the old
+          ones; let Windows replace the files.
+       3. Start the DAW. Your projects keep their sounds.
+
+
+  ======================================================================
+   9. UNINSTALLING
+  ======================================================================
+
+     Delete what you copied:
+
+         C:\Program Files\Common Files\VST3\Zadabar64.vst3
+         C:\Program Files\Common Files\CLAP\Zadabar64.clap
+         Zadabar64.exe, wherever you put it
+
+     Settings live in  %APPDATA%\Zadabar\  (skin, timing). Delete that
+     folder too if you want everything gone. Your patches in
+     Documents\Zadabar64 stay until you delete them.
+
+
+  ======================================================================
+  10. TROUBLESHOOTING
+  ======================================================================
+
+     The plug-in doesn't show up
+       -> Check the path: ...\Common Files\VST3\Zadabar64.vst3\Contents\
+          x86_64-win\Zadabar64.vst3 must exist.
+       -> Rescan in your DAW (section 6).
+       -> Did you unblock the ZIP before extracting? (section 2)
+
+     "Windows protected your PC"
+       -> More info -> Run anyway. Zadabar64 is not code-signed.
+
+     No sound in the standalone app
+       -> Options -> Audio/MIDI Settings: choose an output device,
+          tick your MIDI input, press "Test".
+
+     A click when switching modes or loading a patch
+       -> Normal: a real 6581 jumps too. Zadabar64 mutes the switch
+          for ~50 ms to hide it.
+
+     Something else
+       -> {GITHUB}/issues
+          Tell us your Windows version, your DAW and what happened.
+
+
+  ======================================================================
+
+               Free software by Zadabar of Crisis Productions
+                      {WEBSITE}   {GITHUB}
+
+                                READY.
+                                _
+

@@ -1,0 +1,15 @@
+# Build output
+build/
+out/
+cmake-build-*/
+release/Output/
+
+# IDEs
+.vs/
+.vscode/
+.idea/
+*.user
+
+# OS
+Thumbs.db
+.DS_Store
